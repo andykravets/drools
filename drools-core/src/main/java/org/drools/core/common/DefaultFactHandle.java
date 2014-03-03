@@ -16,31 +16,34 @@
 
 package org.drools.core.common;
 
-import org.drools.core.FactHandle;
 import org.drools.core.factmodel.traits.TraitProxy;
 import org.drools.core.factmodel.traits.TraitTypeEnum;
 import org.drools.core.factmodel.traits.TraitableBean;
-import org.drools.core.util.AbstractBaseLinkedListNode;
-import org.drools.core.util.StringUtils;
 import org.drools.core.reteoo.LeftTuple;
 import org.drools.core.reteoo.ObjectTypeNode;
 import org.drools.core.reteoo.RightTuple;
+import org.drools.core.util.AbstractBaseLinkedListNode;
+import org.drools.core.util.StringUtils;
 import org.kie.api.runtime.rule.EntryPoint;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  * Implementation of <code>FactHandle</code>.
+ * Modified by Andrey Kravets 02.14.2014
+ * Added serialization interface for class
+ * object scope changed private -> protected
  */
 @XmlRootElement(name = "fact-handle")
 @XmlAccessorType(XmlAccessType.NONE)
 public class DefaultFactHandle extends AbstractBaseLinkedListNode<DefaultFactHandle>
                               implements
-                              InternalFactHandle {
+        InternalFactHandle,Serializable {
 
     // ----------------------------------------------------------------------
     // Instance members
@@ -50,22 +53,22 @@ public class DefaultFactHandle extends AbstractBaseLinkedListNode<DefaultFactHan
     /** Handle id. */
     private int                     id;
     private long                    recency;
-    private Object                  object;
-    private EqualityKey             key;
+    protected Object                  object;
+    private EqualityKey key;
     private int                     objectHashCode;
     private int                     identityHashCode;
 
-    private RightTuple              firstRightTuple;
-    private RightTuple              lastRightTuple;
+    private RightTuple firstRightTuple;
+    private RightTuple lastRightTuple;
 
-    private LeftTuple               firstLeftTuple;
-    private LeftTuple               lastLeftTuple;
+    private LeftTuple firstLeftTuple;
+    private LeftTuple lastLeftTuple;
 
     private EntryPoint entryPoint;
 
     private boolean                 disconnected;
 
-    private TraitTypeEnum           traitType;
+    private TraitTypeEnum traitType;
 
     // ----------------------------------------------------------------------
     // Constructors
@@ -152,7 +155,7 @@ public class DefaultFactHandle extends AbstractBaseLinkedListNode<DefaultFactHan
             return true;
         }
 
-        if (object == null || !( object instanceof DefaultFactHandle )) {
+        if (object == null || !( object instanceof DefaultFactHandle)) {
             return false;
         }
 
@@ -201,7 +204,7 @@ public class DefaultFactHandle extends AbstractBaseLinkedListNode<DefaultFactHan
     /**
      * format_version:id:identity:hashcode:recency
      * 
-     * @see FactHandle
+     * @see org.drools.core.FactHandle
      */
     public String toExternalForm() {
         return "0:" + this.id +
@@ -607,19 +610,19 @@ public class DefaultFactHandle extends AbstractBaseLinkedListNode<DefaultFactHan
         this.identityHashCode = Integer.parseInt( elements[2] );
         this.objectHashCode = Integer.parseInt( elements[3] );
         this.recency = Long.parseLong( elements[4] );
-        this.entryPoint = ( StringUtils.isEmpty( elements[5] ) || "null".equals( elements[5].trim() ) ) ? null
+        this.entryPoint = ( StringUtils.isEmpty(elements[5]) || "null".equals( elements[5].trim() ) ) ? null
                                                                                                        : new DisconnectedWorkingMemoryEntryPoint(
                                                                                                                                                   elements[5].trim() );
         this.disconnected = true;
-        this.traitType = elements.length > 6 ? TraitTypeEnum.valueOf( elements[6] ) : TraitTypeEnum.NON_TRAIT;
+        this.traitType = elements.length > 6 ? TraitTypeEnum.valueOf(elements[6]) : TraitTypeEnum.NON_TRAIT;
     }
 
 
     private TraitTypeEnum determineTraitType() {
         if ( isTraitOrTraitable() ) {
-            if ( object instanceof TraitProxy ) {
+            if ( object instanceof TraitProxy) {
                 return TraitTypeEnum.TRAIT;
-            } else if ( object instanceof TraitableBean ) {
+            } else if ( object instanceof TraitableBean) {
                 return TraitTypeEnum.TRAITABLE;
             } else {
                 return TraitTypeEnum.LEGACY_TRAITABLE;

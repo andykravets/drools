@@ -16,33 +16,37 @@
 
 package org.drools.core.common;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.drools.core.reteoo.ObjectTypeConf;
 import org.drools.core.spi.FactHandleFactory;
 import org.kie.api.runtime.rule.EntryPoint;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 public abstract class AbstractFactHandleFactory
-    implements
-    FactHandleFactory  {
+        implements
+        FactHandleFactory {
 
-    /** The fact id. */
-    private AtomicInteger              id;
+    /**
+     * The fact id.
+     */
+    private AtomicInteger id;
 
-    /** The number of facts created - used for recency. */
-    private AtomicLong                 counter;
-    
+    /**
+     * The number of facts created - used for recency.
+     */
+    private AtomicLong counter;
+
     public AbstractFactHandleFactory() {
         // starts at 0. So first assigned is 1.
         // 0 is hard coded to Initialfact
         this.id = new AtomicInteger(0);
         this.counter = new AtomicLong(0);
     }
-    
+
     public AbstractFactHandleFactory(int id, long counter) {
-        this.id = new AtomicInteger( id );
-        this.counter = new AtomicLong( counter );
+        this.id = new AtomicInteger(id);
+        this.counter = new AtomicLong(counter);
     }
 
     /* (non-Javadoc)
@@ -52,11 +56,16 @@ public abstract class AbstractFactHandleFactory
                                                   final ObjectTypeConf conf,
                                                   final InternalWorkingMemory workingMemory,
                                                   final EntryPoint wmEntryPoint) {
-        return newFactHandle( this.id.incrementAndGet(),
-                              object,
-                              conf,
-                              workingMemory,
-                              wmEntryPoint );
+        if (wmEntryPoint instanceof NamedEntryPoint) {
+            int maxId = ((NamedEntryPoint) wmEntryPoint).getCache().getMaxId(id.get());
+            if(id.get()-1<maxId)
+                this.id = new AtomicInteger(maxId);
+        }
+        return newFactHandle(this.id.incrementAndGet(),
+                object,
+                conf,
+                workingMemory,
+                wmEntryPoint);
     }
 
     /* (non-Javadoc)
@@ -67,12 +76,17 @@ public abstract class AbstractFactHandleFactory
                                                   final ObjectTypeConf conf,
                                                   final InternalWorkingMemory workingMemory,
                                                   final EntryPoint wmEntryPoint) {
-        return newFactHandle( id,
-                              object,
-                              this.counter.incrementAndGet(),
-                              conf,
-                              workingMemory,
-                              wmEntryPoint );
+        if (wmEntryPoint instanceof NamedEntryPoint) {
+            long size = ((NamedEntryPoint) wmEntryPoint).getCache().size();
+            if (counter.get() < size-1)
+                this.counter = new AtomicLong(size);
+        }
+        return newFactHandle(id,
+                object,
+                this.counter.incrementAndGet(),
+                conf,
+                workingMemory,
+                wmEntryPoint);
     }
 
     /* (non-Javadoc)
@@ -89,7 +103,7 @@ public abstract class AbstractFactHandleFactory
      * @see org.kie.reteoo.FactHandleFactory#increaseFactHandleRecency(org.drools.core.FactHandle)
      */
     public final void increaseFactHandleRecency(final InternalFactHandle factHandle) {
-        factHandle.setRecency( this.counter.incrementAndGet() );
+        factHandle.setRecency(this.counter.incrementAndGet());
     }
 
     public void destroyFactHandle(final InternalFactHandle factHandle) {
@@ -100,15 +114,15 @@ public abstract class AbstractFactHandleFactory
      * @see org.kie.reteoo.FactHandleFactory#newInstance()
      */
     public abstract FactHandleFactory newInstance();
-    
+
     public AtomicInteger getAtomicId() {
         return this.id;
     }
-    
+
     public AtomicLong getAtomicRecency() {
         return this.counter;
-    }    
-    
+    }
+
     public int getId() {
         return this.id.get();
     }
@@ -116,9 +130,9 @@ public abstract class AbstractFactHandleFactory
     public long getRecency() {
         return this.counter.get();
     }
-    
+
     public void clear(int id, long counter) {
-        this.id = new AtomicInteger( id );
-        this.counter = new AtomicLong( counter );
+        this.id = new AtomicInteger(id);
+        this.counter = new AtomicLong(counter);
     }
 }

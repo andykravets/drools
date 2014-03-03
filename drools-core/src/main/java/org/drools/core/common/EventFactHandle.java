@@ -16,10 +16,9 @@
 
 package org.drools.core.common;
 
-import org.drools.core.reteoo.WindowTupleList;
 import org.kie.api.runtime.rule.EntryPoint;
 
-public class EventFactHandle extends DefaultFactHandle implements Comparable<EventFactHandle> {
+public class EventFactHandle extends DefaultFactHandle implements Comparable<EventFactHandle>{
 
     private static final long serialVersionUID = 510l;
 
@@ -28,7 +27,7 @@ public class EventFactHandle extends DefaultFactHandle implements Comparable<Eve
     private boolean           expired;
     private long              activationsCount;
 
-    private EventFactHandle   linkedFactHandle;
+    private EventFactHandle linkedFactHandle;
 
     // ----------------------------------------------------------------------
     // Constructors

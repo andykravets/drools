@@ -16,29 +16,11 @@
 
 package org.drools.core.common;
 
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.drools.core.FactException;
-import org.drools.core.FactHandle;
-import org.drools.core.RuleBase;
+import org.drools.core.*;
 import org.drools.core.RuleBaseConfiguration.AssertBehaviour;
-import org.drools.core.RuntimeDroolsException;
-import org.drools.core.WorkingMemoryEntryPoint;
 import org.drools.core.base.ClassObjectType;
 import org.drools.core.factmodel.traits.TraitProxy;
 import org.drools.core.factmodel.traits.TraitableBean;
-import org.drools.core.util.Iterator;
-import org.drools.core.util.ObjectHashSet;
-import org.drools.core.util.ObjectHashSet.ObjectEntry;
 import org.drools.core.impl.StatefulKnowledgeSessionImpl.ObjectStoreWrapper;
 import org.drools.core.reteoo.EntryPointNode;
 import org.drools.core.reteoo.ObjectTypeConf;
@@ -51,13 +33,23 @@ import org.drools.core.spi.Activation;
 import org.drools.core.spi.FactHandleFactory;
 import org.drools.core.spi.ObjectType;
 import org.drools.core.spi.PropagationContext;
+import org.drools.core.util.Iterator;
+import org.drools.core.util.ObjectHashSet;
+import org.drools.core.util.ObjectHashSet.ObjectEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class NamedEntryPoint
     implements
-    InternalWorkingMemoryEntryPoint,
-    WorkingMemoryEntryPoint,
+        InternalWorkingMemoryEntryPoint,
+        WorkingMemoryEntryPoint,
     PropertyChangeListener  {
 
     protected static transient Logger log = LoggerFactory.getLogger(NamedEntryPoint.class);
@@ -73,17 +65,19 @@ public class NamedEntryPoint
 
     protected transient InternalRuleBase ruleBase;
 
-    protected EntryPointId     entryPoint;
+    protected EntryPointId entryPoint;
     protected EntryPointNode entryPointNode;
 
     private ObjectTypeConfigurationRegistry typeConfReg;
 
     private final AbstractWorkingMemory wm;
 
-    private FactHandleFactory         handleFactory;
+    private FactHandleFactory handleFactory;
     private PropagationContextFactory pctxFactory;
 
     protected final ReentrantLock lock;
+
+    protected InfinispanBasedTwoLevelCache<Integer, Object> cache;
 
     protected Set<InternalFactHandle> dynamicFacts = null;
 
@@ -110,10 +104,15 @@ public class NamedEntryPoint
         this.pctxFactory = ruleBase.getConfiguration().getComponentFactory().getPropagationContextFactory();
         this.objectStore = new SingleThreadedObjectStore(this.ruleBase.getConfiguration(),
                                                          this.lock);
+        this.cache = new InfinispanBasedTwoLevelCache<Integer, Object>();
     }
 
     public void reset() {
         this.objectStore.clear();
+    }
+
+    public InfinispanBasedTwoLevelCache<Integer, Object> getCache() {
+        return cache;
     }
 
     public ObjectStore getObjectStore() {
@@ -205,8 +204,8 @@ public class NamedEntryPoint
                     
                     if ( logical ) {  
                         if ( key != null && key.getStatus() == EqualityKey.STATED ) {
-                            // You cannot logically insert a previously stated equality equal object, so return null                            
-                            return null;
+                            // You cannot logically insert a previously stated equality equal object
+                            return key.getFactHandle();
                         }
                         
 
@@ -215,10 +214,10 @@ public class NamedEntryPoint
                             handle = createHandle( object,
                                                    typeConf ); // we know the handle is null
                             
-                            key = new EqualityKey( handle ); 
+                            key = new EqualityKey( handle );
                             handle.setEqualityKey( key );
                             tms.put( key );                           
-                            key.setStatus( EqualityKey.JUSTIFIED ); // new Key, so we know it's JUSTIFIED                 
+                            key.setStatus( EqualityKey.JUSTIFIED ); // new Key, so we know it's JUSTIFIED
                         } else {
                             handle = key.getFactHandle();
                         }
@@ -238,17 +237,17 @@ public class NamedEntryPoint
                         if ( key == null ) {
                             handle = createHandle( object,
                                                    typeConf ); // we know the handle is null                            
-                            key = new EqualityKey( handle );                        
+                            key = new EqualityKey( handle );
                             handle.setEqualityKey( key );                            
                             tms.put( key );                  
                         } else if ( key.getStatus() == EqualityKey.JUSTIFIED ) {
                                 // Its previous justified, so switch to stated
-                                key.setStatus( EqualityKey.STATED ); // must be done before the justifiedHandle retract  
+                                key.setStatus( EqualityKey.STATED ); // must be done before the justifiedHandle retract
                                 
                                 // remove logical dependencies
                                 final InternalFactHandle justifiedHandle = key.getFactHandle();
                                 propagationContext.setFactHandle( justifiedHandle ); // necessary to stop recursive retractions
-                                TruthMaintenanceSystemHelper.clearLogicalDependencies( justifiedHandle, propagationContext );
+                                TruthMaintenanceSystemHelper.clearLogicalDependencies(justifiedHandle, propagationContext);
                                 
                                 // now update existing handle to new value
                                 return update( justifiedHandle, true, object, Long.MAX_VALUE, Object.class, activation );
@@ -324,7 +323,7 @@ public class NamedEntryPoint
         if ( !logical ) {
             // this object was previously justified, so we have to override it to stated
             key.setStatus( EqualityKey.STATED );
-            TruthMaintenanceSystemHelper.removeLogicalDependencies( handle, propagationContext );
+            TruthMaintenanceSystemHelper.removeLogicalDependencies(handle, propagationContext);
         } else {                                        
             // this was object is already justified, so just add new logical dependency
             tms.addLogicalDependency( handle,
@@ -468,7 +467,7 @@ public class NamedEntryPoint
                 if ( newKey == null ) {                    
                     if ( oldKey.getStatus() == EqualityKey.JUSTIFIED ) {
                         // new target key is JUSTFIED, updates are always STATED
-                        TruthMaintenanceSystemHelper.removeLogicalDependencies( oldKey.getFactHandle(), propagationContext );
+                        TruthMaintenanceSystemHelper.removeLogicalDependencies(oldKey.getFactHandle(), propagationContext);
                     }
                     
                     oldKey.removeFactHandle( handle );
@@ -490,14 +489,14 @@ public class NamedEntryPoint
                     
                     if ( newKey.getStatus() == EqualityKey.JUSTIFIED ) {
                         // new target key is JUSTITIED, updates are always STATED
-                        TruthMaintenanceSystemHelper.removeLogicalDependencies( newKey.getFactHandle(), propagationContext );
+                        TruthMaintenanceSystemHelper.removeLogicalDependencies(newKey.getFactHandle(), propagationContext);
                         newKey.setStatus( EqualityKey.STATED );
                     }
                     // the caller needs the new handle
                     handle = newKey.getFactHandle();
                 } else if ( !updateLogical &&  oldKey.getStatus() == EqualityKey.JUSTIFIED  ) {
                     // new target key is JUSTIFIED, updates are always STATED
-                    TruthMaintenanceSystemHelper.removeLogicalDependencies( oldKey.getFactHandle(), propagationContext );                     
+                    TruthMaintenanceSystemHelper.removeLogicalDependencies(oldKey.getFactHandle(), propagationContext);
                 }
             }
 
@@ -619,7 +618,7 @@ public class NamedEntryPoint
 
                 // Its justified so attempt to remove any logical dependencies for the handle
                 if ( key.getStatus() == EqualityKey.JUSTIFIED ) {
-                    TruthMaintenanceSystemHelper.removeLogicalDependencies( handle, propagationContext );
+                    TruthMaintenanceSystemHelper.removeLogicalDependencies(handle, propagationContext);
                 } 
                 key.removeFactHandle( handle );
                 handle.setEqualityKey( null );
@@ -630,7 +629,7 @@ public class NamedEntryPoint
                 }
             }
 
-            if ( handle.isTraiting() && handle.getObject() instanceof TraitProxy ) {
+            if ( handle.isTraiting() && handle.getObject() instanceof TraitProxy) {
                 (( (TraitProxy) handle.getObject() ).getObject()).removeTrait( ( (TraitProxy) handle.getObject() ).getTypeCode() );
             }
 
@@ -822,11 +821,11 @@ public class NamedEntryPoint
       
         // All objects of this type that are already there were certainly stated,
         // since this method call happens at the first logical insert, for any given type.
-        org.drools.core.util.Iterator it = memory.iterator();
+        Iterator it = memory.iterator();
 
         for ( Object obj = it.next(); obj != null; obj = it.next() ) {
-          
-            org.drools.core.util.ObjectHashSet.ObjectEntry holder = (org.drools.core.util.ObjectHashSet.ObjectEntry) obj;
+
+            ObjectEntry holder = (ObjectEntry) obj;
     
             InternalFactHandle handle = (InternalFactHandle) holder.getValue();
             

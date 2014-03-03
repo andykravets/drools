@@ -16,17 +16,12 @@
 
 package org.drools.core.reteoo;
 
-import java.io.Serializable;
-
-import org.drools.core.common.AbstractFactHandleFactory;
-import org.drools.core.common.DefaultFactHandle;
-import org.drools.core.common.EventFactHandle;
-import org.drools.core.common.InternalFactHandle;
-import org.drools.core.common.InternalWorkingMemory;
-import org.drools.core.factmodel.traits.TraitProxy;
+import org.drools.core.common.*;
 import org.drools.core.rule.TypeDeclaration;
 import org.drools.core.spi.FactHandleFactory;
 import org.kie.api.runtime.rule.EntryPoint;
+
+import java.io.Serializable;
 
 public class ReteooFactHandleFactory extends AbstractFactHandleFactory implements Serializable {
 
@@ -38,47 +33,72 @@ public class ReteooFactHandleFactory extends AbstractFactHandleFactory implement
 
     public ReteooFactHandleFactory(int id,
                                    long counter) {
-        super( id,
-               counter );
+        super(id,
+                counter);
     }
 
     /* (non-Javadoc)
      * @see org.kie.reteoo.FactHandleFactory#newFactHandle(long)
      */
-    public InternalFactHandle newFactHandle( final int id,
-                                             final Object object,
-                                             final long recency,
-                                             final ObjectTypeConf conf,
-                                             final InternalWorkingMemory workingMemory,
-                                             final EntryPoint wmEntryPoint) {
-        if ( conf != null && conf.isEvent() ) {
+    public InternalFactHandle newFactHandle(final int id,
+                                            final Object object,
+                                            final long recency,
+                                            final ObjectTypeConf conf,
+                                            final InternalWorkingMemory workingMemory,
+                                            final EntryPoint wmEntryPoint) {
+        if (conf != null && conf.isEvent()) {
             TypeDeclaration type = conf.getTypeDeclaration();
             long timestamp;
-            if ( type.getTimestampExtractor() != null ) {
-                timestamp = type.getTimestampExtractor().getLongValue( workingMemory,
-                                                                       object );
+            if (type.getTimestampExtractor() != null) {
+                timestamp = type.getTimestampExtractor().getLongValue(workingMemory,
+                        object);
             } else {
                 timestamp = workingMemory.getTimerService().getCurrentTime();
             }
             long duration = 0;
-            if ( type.getDurationExtractor() != null ) {
-                duration = type.getDurationExtractor().getLongValue( workingMemory,
-                                                                     object );
+            if (type.getDurationExtractor() != null) {
+                duration = type.getDurationExtractor().getLongValue(workingMemory,
+                        object);
             }
-            return new EventFactHandle( id,
-                                        object,
-                                        recency,
-                                        timestamp,
-                                        duration,
-                                        wmEntryPoint,
-                                        conf != null && conf.isTrait() );
+            if (isANamedEntryPoint(wmEntryPoint)) {
+                return new ExternalEventFactHandle(id,
+                        object,
+                        recency,
+                        timestamp,
+                        duration,
+                        wmEntryPoint,
+                        isTraitOrTraitable(conf));
+            } else {
+                return new EventFactHandle(id,
+                        object,
+                        recency,
+                        timestamp,
+                        duration,
+                        wmEntryPoint,
+                        isTraitOrTraitable(conf));
+            }
         } else {
-            return new DefaultFactHandle( id,
-                                          object,
-                                          recency,
-                                          wmEntryPoint,
-                                          conf != null && conf.isTrait() );
+            if (isANamedEntryPoint(wmEntryPoint)) {
+                return new ExternalFactHandle(id,
+                        object,
+                        recency,
+                        wmEntryPoint);
+            } else {
+                return new DefaultFactHandle(id,
+                        object,
+                        recency,
+                        wmEntryPoint,
+                        isTraitOrTraitable(conf));
+            }
         }
+    }
+
+    private boolean isTraitOrTraitable(ObjectTypeConf conf) {
+        return conf != null && conf.isTrait();
+    }
+
+    private boolean isANamedEntryPoint(EntryPoint wmEntryPoint) {
+        return wmEntryPoint instanceof NamedEntryPoint;
     }
 
     /* (non-Javadoc)
@@ -90,8 +110,8 @@ public class ReteooFactHandleFactory extends AbstractFactHandleFactory implement
 
     public FactHandleFactory newInstance(int id,
                                          long counter) {
-        return new ReteooFactHandleFactory( id,
-                                            counter );
+        return new ReteooFactHandleFactory(id,
+                counter);
     }
 
     public Class getFactHandleType() {
