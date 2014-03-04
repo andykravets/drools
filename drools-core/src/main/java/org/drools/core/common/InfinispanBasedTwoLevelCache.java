@@ -1,8 +1,9 @@
 package org.drools.core.common;
 
-import org.infinispan.client.hotrod.RemoteCache;
-import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.Cache;
+import org.infinispan.manager.DefaultCacheManager;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
@@ -13,8 +14,20 @@ import java.util.*;
 public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> implements Map<K, V>, Serializable {
 
     private final Map<K, V> L1Cache = new HashMap<K, V>();
-    private final RemoteCache<K, V> L2Cache = new RemoteCacheManager().getCache();
+    private final Cache<K, V> L2Cache;
     private K maxId = null;
+
+    public InfinispanBasedTwoLevelCache() {
+        Cache<K, V> cache = null;
+        try {
+            cache = new DefaultCacheManager("infinispan.xml").getCache("FH");
+        } catch (IOException e) {
+            e.printStackTrace();
+            cache = new DefaultCacheManager().getCache("FH");
+        } finally {
+            L2Cache = cache;
+        }
+    }
 
     @Override
     public int size() {
