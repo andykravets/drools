@@ -1,5 +1,6 @@
 package org.drools.core.common;
 
+
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
 
@@ -28,6 +29,21 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
             L2Cache = cache;
         }
     }
+
+/*    private void tryToUpdateCL(Class clazz) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        CompositeClassLoader compositeClassLoader = new CompositeClassLoader();
+        ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+        Field field = ClassLoader.class.getField("classes");
+        field.setAccessible(true);
+        Vector<Class<?>> classes = (Vector<Class<?>>) field.get(currentClassLoader);
+        if(!classes.contains(clazz)){
+            compositeClassLoader.addClassLoader(currentClassLoader);
+            Method method = compositeClassLoader.getClass().getMethod("addClass");
+            method.setAccessible(true);
+            method.invoke(compositeClassLoader, clazz);
+            Thread.currentThread().setContextClassLoader(compositeClassLoader);
+        }
+    }*/
 
     @Override
     public int size() {
@@ -69,6 +85,17 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
                 L2Cache.put(key, value);
             }
         }
+/*        try {
+            tryToUpdateCL(value.getClass());
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }*/
         return val;
     }
 
