@@ -3,9 +3,12 @@ package org.drools.core.common;
 
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
+import org.kie.internal.utils.CompositeClassLoader;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -17,6 +20,8 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
     private final Map<K, V> L1Cache = new HashMap<K, V>();
     private final Cache<K, V> L2Cache;
     private K maxId = null;
+
+    public static CompositeClassLoader compositeClassLoader = new CompositeClassLoader();
 
     public InfinispanBasedTwoLevelCache() {
         Cache<K, V> cache = null;
@@ -30,20 +35,14 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
         }
     }
 
-/*    private void tryToUpdateCL(Class clazz) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        CompositeClassLoader compositeClassLoader = new CompositeClassLoader();
+    private void tryToUpdateCL(Class clazz) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
-        Field field = ClassLoader.class.getField("classes");
-        field.setAccessible(true);
-        Vector<Class<?>> classes = (Vector<Class<?>>) field.get(currentClassLoader);
-        if(!classes.contains(clazz)){
-            compositeClassLoader.addClassLoader(currentClassLoader);
-            Method method = compositeClassLoader.getClass().getMethod("addClass");
-            method.setAccessible(true);
-            method.invoke(compositeClassLoader, clazz);
-            Thread.currentThread().setContextClassLoader(compositeClassLoader);
-        }
-    }*/
+        compositeClassLoader.addClassLoader(currentClassLoader);
+        Method method = ClassLoader.class.getDeclaredMethod("addClass", Class.class);
+        method.setAccessible(true);
+        method.invoke(compositeClassLoader, clazz);
+        Thread.currentThread().setContextClassLoader(compositeClassLoader);
+    }
 
     @Override
     public int size() {
@@ -85,7 +84,7 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
                 L2Cache.put(key, value);
             }
         }
-/*        try {
+        try {
             tryToUpdateCL(value.getClass());
         } catch (NoSuchFieldException e) {
             e.printStackTrace();
@@ -95,7 +94,7 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.printStackTrace();
-        }*/
+        }
         return val;
     }
 

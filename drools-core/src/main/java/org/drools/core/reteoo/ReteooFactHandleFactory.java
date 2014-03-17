@@ -78,9 +78,9 @@ public class ReteooFactHandleFactory extends AbstractFactHandleFactory implement
                         isTraitOrTraitable(conf));
             }
         } else {
-            if (isANamedEntryPoint(wmEntryPoint)) {
+/*            if (isANamedEntryPoint(wmEntryPoint)) {
                 return new ExternalFactHandle(id, object, recency, wmEntryPoint);
-            }
+            }*/
             return new DefaultFactHandle(id,
                     object,
                     recency,
