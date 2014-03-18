@@ -3,12 +3,9 @@ package org.drools.core.common;
 
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
-import org.kie.internal.utils.CompositeClassLoader;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -21,8 +18,6 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
     private final Cache<K, V> L2Cache;
     private K maxId = null;
 
-    public static CompositeClassLoader compositeClassLoader = new CompositeClassLoader();
-
     public InfinispanBasedTwoLevelCache() {
         Cache<K, V> cache = null;
         try {
@@ -33,15 +28,6 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
         } finally {
             L2Cache = cache;
         }
-    }
-
-    private void tryToUpdateCL(Class clazz) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
-        compositeClassLoader.addClassLoader(currentClassLoader);
-        Method method = ClassLoader.class.getDeclaredMethod("addClass", Class.class);
-        method.setAccessible(true);
-        method.invoke(compositeClassLoader, clazz);
-        Thread.currentThread().setContextClassLoader(compositeClassLoader);
     }
 
     @Override
@@ -83,19 +69,9 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
                 val = L1Cache.put(key, value);
                 L2Cache.put(key, value);
             }
+            return val;
         }
-        try {
-            tryToUpdateCL(value.getClass());
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
-        return val;
+
     }
 
     @Override
