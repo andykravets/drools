@@ -694,7 +694,7 @@ public class ProtobufOutputMarshaller {
 
             Integer index = context.getStrategyIndex(strategy);
             _handle.setStrategyIndex(index.intValue());
-            if (handle.getClass() == ExternalEventFactHandle.class) {
+            if (handle instanceof ExternalFactHandle || handle instanceof ExternalEventFactHandle) {
                 _handle.setObject(ByteString.copyFrom(strategy.marshal(context.strategyContext.get(strategy),
                         context,
                         handle.getId())));
