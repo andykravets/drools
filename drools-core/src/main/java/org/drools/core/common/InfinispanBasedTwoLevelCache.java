@@ -19,14 +19,21 @@ public class InfinispanBasedTwoLevelCache<K extends Comparable<? super K>, V> im
     private K maxId = null;
 
     public InfinispanBasedTwoLevelCache() {
-        Cache<K, V> cache = null;
-        try {
-            cache = new DefaultCacheManager("infinispan.xml").getCache("FH");
-        } catch (IOException e) {
-            e.printStackTrace();
-            cache = new DefaultCacheManager().getCache("FH");
-        } finally {
+        this(null);
+    }
+
+    public InfinispanBasedTwoLevelCache(Cache<K, V> cache) {
+        if (cache != null)
             L2Cache = cache;
+        else {
+            try {
+                cache = new DefaultCacheManager("infinispan.xml").getCache("FH");
+            } catch (IOException e) {
+                e.printStackTrace();
+                cache = new DefaultCacheManager().getCache("FH");
+            } finally {
+                L2Cache = cache;
+            }
         }
     }
 
