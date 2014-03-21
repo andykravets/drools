@@ -63,6 +63,7 @@ import org.drools.core.rule.TypeDeclaration;
 import org.drools.core.rule.WindowDeclaration;
 import org.drools.core.spi.FactHandleFactory;
 import org.drools.core.spi.PropagationContext;
+import org.infinispan.Cache;
 import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.io.Resource;
 import org.kie.api.marshalling.Marshaller;
@@ -1049,6 +1050,19 @@ public class ReteooRuleBase
                                    SessionConfiguration.getDefaultInstance() );
     }
 
+    public StatefulSession newStatefulSession(SessionConfiguration sessionConfig,
+                                              Environment environment) {
+        if ( sessionConfig == null ) {
+            sessionConfig = SessionConfiguration.getDefaultInstance();
+        }
+        if ( environment == null ) {
+            environment = EnvironmentFactory.newEnvironment();
+        }
+        return newStatefulSession( nextWorkingMemoryCounter(),
+                sessionConfig,
+                environment );
+    }
+
     public StatefulSession newStatefulSession(java.io.InputStream stream,
                                               boolean keepReference,
                                               SessionConfiguration conf) {
@@ -1096,19 +1110,6 @@ public class ReteooRuleBase
             }
         }
         return session;
-    }
-
-    public StatefulSession newStatefulSession(SessionConfiguration sessionConfig,
-                                              Environment environment) {
-        if ( sessionConfig == null ) {
-            sessionConfig = SessionConfiguration.getDefaultInstance();
-        }
-        if ( environment == null ) {
-            environment = EnvironmentFactory.newEnvironment();
-        }
-        return newStatefulSession( nextWorkingMemoryCounter(),
-                                   sessionConfig,
-                                   environment );
     }
 
     StatefulSession newStatefulSession(int id,

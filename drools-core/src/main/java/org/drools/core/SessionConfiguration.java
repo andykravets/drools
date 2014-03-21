@@ -23,6 +23,7 @@ import org.drools.core.util.StringUtils;
 import org.drools.core.process.instance.WorkItemManagerFactory;
 import org.drools.core.time.TimerService;
 import org.drools.core.time.impl.TimerJobFactoryManager;
+import org.infinispan.Cache;
 import org.kie.api.runtime.conf.TimedRuleExectionOption;
 import org.kie.api.runtime.conf.TimedRuleExecutionFilter;
 import org.kie.internal.KnowledgeBase;
@@ -99,6 +100,7 @@ public class SessionConfiguration
     
     private transient TimerJobFactoryManager timerJobFactoryManager;
     private TimerJobFactoryType              timerJobFactoryType;
+    private Cache<Integer, Object> ISCache;
 
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject( chainedProperties );
@@ -108,7 +110,15 @@ public class SessionConfiguration
         out.writeObject( queryListener );
         out.writeObject( timerJobFactoryType );
     }
-    
+
+    public Cache<Integer, Object> getISCache() {
+        return ISCache;
+    }
+
+    public void setISCache(Cache<Integer, Object> ISCache) {
+        this.ISCache = ISCache;
+    }
+
     private static final SessionConfiguration defaultInstance = new SessionConfiguration();
     
     public static SessionConfiguration getDefaultInstance() {

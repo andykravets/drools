@@ -511,8 +511,8 @@ public class ProtobufInputMarshaller {
         EntryPointId confEP;
         if (entryPoint != null) {
             confEP = ((NamedEntryPoint) entryPoint).getEntryPoint();
-            if (object.getClass() == Integer.class) {
-                object = ((NamedEntryPoint) entryPoint).getCache().get(object);
+            if (object instanceof Integer) {
+                object = ((NamedEntryPoint) entryPoint).getCache().get((Integer)object);
             }
         } else {
             confEP = context.wm.getEntryPoint();

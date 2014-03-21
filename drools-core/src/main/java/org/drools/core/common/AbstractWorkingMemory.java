@@ -113,6 +113,7 @@ import org.drools.core.time.TimerService;
 import org.drools.core.time.TimerServiceFactory;
 import org.drools.core.type.DateFormats;
 import org.drools.core.type.DateFormatsImpl;
+import org.infinispan.Cache;
 import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.event.process.ProcessEventListener;
 import org.kie.api.event.process.ProcessEventManager;
@@ -229,6 +230,7 @@ public class AbstractWorkingMemory
 
     private transient ObjectMarshallingStrategyStore marshallingStore;
     private transient List                           ruleBaseListeners;
+    private Cache<Integer, Object> ISCache;
 
     // ------------------------------------------------------------
     // Constructors
@@ -269,6 +271,7 @@ public class AbstractWorkingMemory
              new AgendaEventSupport(),
              new RuleEventListenerSupport(),
              null );
+
     }
 
     public AbstractWorkingMemory(final int id,
@@ -309,7 +312,7 @@ public class AbstractWorkingMemory
         this.ruleBase = ruleBase;
         this.handleFactory = handleFactory;
         this.pctxFactory = ruleBase.getConfiguration().getComponentFactory().getPropagationContextFactory();
-        this.environment = environment;
+        this.environment = environment;;
 
         nodeMemories = new ConcurrentNodeMemories(this.ruleBase);
         actionQueue = new ConcurrentLinkedQueue<WorkingMemoryAction>();
@@ -703,6 +706,14 @@ public class AbstractWorkingMemory
                 entryPoints.remove(removedNode.getEntryPoint().getEntryPointId());
             }
         }
+    }
+
+    public Cache<Integer, Object> getISCache() {
+        return ISCache;
+    }
+
+    public void setISCache(Cache<Integer, Object> ISCache) {
+        this.ISCache = ISCache;
     }
 
     private void initTransient() {
